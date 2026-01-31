@@ -1,0 +1,222 @@
+{
+  "main": {
+    "id": "d59a5d4da9da987e",
+    "type": "split",
+    "children": [
+      {
+        "id": "650e58dc1cffa2cc",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "267149e548ad7419",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "general/2025 MoE Model Overview.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "2025 MoE Model Overview"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "d03c6c8dc2759d79",
+    "type": "split",
+    "children": [
+      {
+        "id": "3993a3c6cb5e06f6",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "98872eb1094d1af5",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false
+              },
+              "icon": "lucide-folder-closed",
+              "title": "Files"
+            }
+          },
+          {
+            "id": "7ba0cad66c123a5a",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "Search"
+            }
+          },
+          {
+            "id": "c6721e1aac11845d",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {},
+              "icon": "lucide-bookmark",
+              "title": "Bookmarks"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 352.50418853759766,
+    "collapsed": true
+  },
+  "right": {
+    "id": "cdf8150d5b027fa9",
+    "type": "split",
+    "children": [
+      {
+        "id": "ab246807b2aee42b",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "2e160c3389a201ac",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "file": "Reading/How To Scale Your Model.md",
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "Backlinks for How To Scale Your Model"
+            }
+          },
+          {
+            "id": "8c2b8a9059ed1df1",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "file": "Vision language models. Visual reasoning.md",
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "Outgoing links from Vision language models. Visual reasoning"
+            }
+          },
+          {
+            "id": "6f08594861a3469f",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "Tags"
+            }
+          },
+          {
+            "id": "f0fc545ce6bf7cc7",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "Vision language models. Visual reasoning.md",
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "Outline of Vision language models. Visual reasoning"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "bases:Create new base": false,
+      "switcher:Open quick switcher": false,
+      "graph:Open graph view": false,
+      "canvas:Create new canvas": false,
+      "daily-notes:Open today's daily note": false,
+      "templates:Insert template": false,
+      "command-palette:Open command palette": false
+    }
+  },
+  "active": "267149e548ad7419",
+  "lastOpenFiles": [
+    "CLAUDE.md",
+    "general/Benchmarks.md",
+    "general/Research Directions.md",
+    "general/Modern Transformer.md",
+    "general/Flash Notes.md",
+    "general/TO-DO.md",
+    "reading-notes/Vision language models. Visual reasoning.md",
+    "reading-notes/When Speed Kills Stability.md",
+    "reading-notes/RL without External Rewards.md",
+    "reading-notes/Olmo 3.md",
+    "reading-notes/Multimodal Document QA.md",
+    "reading-notes/Motif 2.md",
+    "reading-notes/MoE Inference Economics.md",
+    "reading-notes/MiMo V2 Flash.md",
+    "reading-notes/M2.1 Post Training.md",
+    "reading-notes/Long Context Benchmarking.md",
+    "reading-notes/Magistral.md",
+    "reading-notes/LLM RL with no data. lol.md",
+    "blog/2022-10-10-alphatensor.md",
+    "reading-notes/2025-10-27-visualretrievers.md",
+    "reading-notes/2025-10-21-deepseekocr.md",
+    "reading-notes/2025-10-21-artofscalingrl.md",
+    "reading-notes/2025-10-19-onpolicydistillation.md",
+    "reading-notes/2025-10-16-moreling.md",
+    "reading-notes/2025-10-15-lorawithoutregrets.md",
+    "reading-notes/2025-09-23-longcatflash.md",
+    "assets/zephyr-ktodpoipo.png",
+    "assets/warpgroup.png",
+    "assets/vqvae.png",
+    "assets/visionencoders.png",
+    "assets/vima2.png",
+    "assets/vima.jpeg",
+    "assets/unet.png",
+    "assets/transformerstream.png",
+    "assets/tensormul.png",
+    "assets/systemoverviewopenfive.png",
+    "images",
+    "blog",
+    "blog",
+    "general",
+    "Untitled.canvas",
+    "Untitled.base",
+    "Untitled 1.base",
+    "Training - Inference Mismatch",
+    "reading-notes",
+    "assets"
+  ]
+}
