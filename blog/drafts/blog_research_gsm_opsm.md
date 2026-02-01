@@ -6,16 +6,15 @@ This document compiles research notes for writing a blog post on Geometric Seque
 
 ## Table of Contents
 
-1. [Background: The Off-Policy Problem in RL for LLMs](#1-background-the-off-policy-problem-in-rl-for-llms)
+1. [Theory Background: The Off-Policy Problem in RL for LLMs](#1-background-the-off-policy-problem-in-rl-for-llms)
 2. [Existing Importance Sampling Correction Methods](#2-existing-importance-sampling-correction-methods)
 3. [The Length Bias Problem](#3-the-length-bias-problem)
 4. [Geometric Sequence Masking (GSM)](#4-geometric-sequence-masking-gsm)
 5. [DeepSeek OPSM](#5-deepseek-opsm)
 6. [OPSM as a Variant of Geometric Sequence Masking](#6-opsm-as-a-variant-of-geometric-sequence-masking)
 7. [Factoring OPSM: Training-Inference Mismatch + Staleness](#7-factoring-opsm-training-inference-mismatch--staleness)
-8. [Implementation Details and Code Snippets](#8-implementation-details-and-code-snippets)
-9. [Key Takeaways and Comparison Table](#9-key-takeaways-and-comparison-table)
-10. [References](#10-references)
+8. [Key Takeaways and Comparison Table](#8-key-takeaways-and-comparison-table)
+9. [References](#9-references)
 
 ---
 
@@ -492,7 +491,7 @@ off_policy_sequence_mask = (is_pos_adv | is_low_kl)
 ```
 
 
-## 9. Key Takeaways and Comparison Table
+## 8. Key Takeaways and Comparison Table
 
 ### Mathematical Relationships
 
@@ -511,7 +510,7 @@ off_policy_sequence_mask = (is_pos_adv | is_low_kl)
 
 ---
 
-## 10. References
+## 9. References
 
 ### Primary Sources
 
