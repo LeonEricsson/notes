@@ -6,7 +6,7 @@ year: 2025
 type: blog
 ---
 
-DeepSeek's Off-Policy Sequence Masking (OPSM), introduced in the V3.2 technical report, is mathematically equivalent to a one-sided geometric sequence mask. This might sound like a minor notational curiosity, but it's not. Understanding this equivalence clarifies what OPSM is actually doing, connects it to a broader class of length-invariant importance sampling corrections, and provides a cleaner mental model for implementing and extending these techniques. The goal of this post is to walk through the theory that leads to this insight.
+DeepSeek's Off-Policy Sequence Masking (OPSM), introduced in the V3.2 technical report, is mathematically equivalent to a one-sided geometric sequence mask. If you're implementing OPSM, this means you can reuse existing geometric masking machinery—the "KL threshold" in OPSM is just the log of a geometric mean. This post walks through the theory that leads to this equivalence.
 
 ## the off-policy problem
 
@@ -102,7 +102,7 @@ That single division by sequence length transforms length-biased sequence IS int
 
 ## deepseek opsm
 
-DeepSeek-V3.2 introduces Off-Policy Sequence Masking to stabilize training by masking sequences that have drifted too far from the current policy. The OPSM masking rule introduces a binary mask $M_{i,t}$:
+DeepSeek-V3.2 introduces Off-Policy Sequence Masking to stabilize training by masking sequences that have drifted too far from the current policy. The OPSM masking rule introduces a binary mask $M_{i,t}$ (using DeepSeek's 1-indexed notation):
 
 $$
 M_{i,t} = \begin{cases}
@@ -117,7 +117,7 @@ The rationale from the paper:
 
 > Models benefit the most by learning from its own mistakes, whereas highly off-policy negative samples can be detrimental, potentially misleading or destabilizing the optimization process.
 
-This is a one-sided condition: it only masks negative-advantage samples that have drifted too far.
+This is a one-sided condition: it only masks negative-advantage samples that have drifted too far. Note that OPSM operates at sequence-level and complements GRPO's token-level ratio clipping—the clipping handles per-token trust regions while OPSM provides a coarser sequence-level filter for highly off-policy negative samples.
 
 There's a crucial detail in the DeepSeek paper regarding notation:
 
@@ -130,7 +130,7 @@ DeepSeek uses the inference engine's log-probs as $\pi_{\text{old}}$, meaning OP
 Now for the punchline. The OPSM KL term is exactly the negative of the log geometric mean of importance ratios:
 
 $$
-\underbrace{\frac{1}{T} \sum_{t=0}^T \log \frac{\mu_{\text{old}}(y_t | x, y_{<t})}{\pi(y_t | x, y_{<t})}}_{\text{OPSM KL term}} = -\underbrace{\frac{1}{T} \sum_{t=0}^T \log \frac{\pi(y_t | x, y_{<t})}{\mu_{\text{old}}(y_t | x, y_{<t})}}_{\log \rho_{\text{geo}}}
+\underbrace{\frac{1}{T} \sum_{t=0}^{T-1} \log \frac{\mu_{\text{old}}(y_t | x, y_{<t})}{\pi(y_t | x, y_{<t})}}_{\text{OPSM KL term}} = -\underbrace{\frac{1}{T} \sum_{t=0}^{T-1} \log \frac{\pi(y_t | x, y_{<t})}{\mu_{\text{old}}(y_t | x, y_{<t})}}_{\log \rho_{\text{geo}}}
 $$
 
 More simply: $\text{OPSM KL term} = -\log \rho_{\text{geo}}$.
@@ -138,7 +138,7 @@ More simply: $\text{OPSM KL term} = -\log \rho_{\text{geo}}$.
 We can rewrite OPSM's condition in terms of the geometric mean. The condition
 
 $$
-\frac{1}{T} \sum_{t=0}^T \log \frac{\mu_{\text{old}}}{\pi} > \delta
+\frac{1}{T} \sum_{t=0}^{T-1} \log \frac{\mu_{\text{old}}}{\pi} > \delta
 $$
 
 is equivalent to:
@@ -155,7 +155,9 @@ OPSM is a one-sided geometric sequence mask that drops sequences where the curre
 | Advantage condition | None | Only applies to negative advantages |
 | Distribution ratio | $\frac{\pi_{\text{old}}}{\mu_{\text{old}}}$ | $\frac{\pi}{\mu_{\text{old}}}$ |
 
-The key difference in the distribution ratio is that OPSM conflates both sources of off-policyness—training-inference mismatch and policy staleness—into a single masking condition. We can make this explicit by factoring the OPSM ratio:
+The key difference in the distribution ratio is that OPSM conflates both sources of off-policyness—training-inference mismatch and policy staleness—into a single masking condition.
+
+To better understand what OPSM captures, we can conceptually factor the ratio into its two components. Note that this factorization is a mental model I'm introducing here, not something DeepSeek explicitly implements—they simply use the inference engine's log-probs directly. But the decomposition clarifies what the single ratio is measuring:
 
 $$
 \frac{\pi(y_t | x, y_{<t})}{\mu_{\text{old}}(y_t | x, y_{<t})} = \underbrace{\frac{\pi_{\text{old}}(y_t | x, y_{<t})}{\mu_{\text{old}}(y_t | x, y_{<t})}}_{\text{training-inference mismatch}} \times \underbrace{\frac{\pi(y_t | x, y_{<t})}{\pi_{\text{old}}(y_t | x, y_{<t})}}_{\text{policy staleness}}
@@ -164,10 +166,10 @@ $$
 Taking logs and averaging over the sequence:
 
 $$
-\log \rho_{\text{geo}}^{\text{OPSM}} = \underbrace{\frac{1}{T} \sum_{t=0}^T \log \frac{\pi_{\text{old}}}{\mu_{\text{old}}}}_{\text{training-inference term}} + \underbrace{\frac{1}{T} \sum_{t=0}^T \log \frac{\pi}{\pi_{\text{old}}}}_{\text{staleness term}}
+\log \rho_{\text{geo}}^{\text{OPSM}} = \underbrace{\frac{1}{T} \sum_{t=0}^{T-1} \log \frac{\pi_{\text{old}}}{\mu_{\text{old}}}}_{\text{training-inference term}} + \underbrace{\frac{1}{T} \sum_{t=0}^{T-1} \log \frac{\pi}{\pi_{\text{old}}}}_{\text{staleness term}}
 $$
 
-This factorization is useful because the training-inference term is constant per rollout—it only needs to be computed once when data is generated. The staleness term changes with each gradient step as $\pi$ updates. In implementation:
+This factorization is useful because it reveals that the training-inference term is constant per rollout—it only needs to be computed once when data is generated—while the staleness term changes with each gradient step as $\pi$ updates. If you're implementing a system that tracks both sources separately (e.g., for debugging or ablations), the code might look like:
 
 ```python
 # Computed once per rollout
