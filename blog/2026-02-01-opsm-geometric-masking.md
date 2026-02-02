@@ -1,147 +1,190 @@
 ---
 layout: post
-title: "DeepSeek's Off-Policy Sequence Masking is Geometric Sequence Masking"
+title: "deepseek off policy sequence masking is a geometric sequence mask"
 categories: [RL]
 year: 2025
 type: blog
 ---
 
-DeepSeek's Off-Policy Sequence Masking (OPSM), introduced in their V3.2 technical report, is mathematically equivalent to a one-sided geometric sequence mask. This equivalence provides two practical benefits: you can implement OPSM by reusing existing geometric masking code, and you gain a principled framework for understanding what OPSM optimizes. The "KL threshold" in OPSM is simply the log of a geometric ratio threshold.
+Geometric Sequence Masking is a technique for importance sampling correction in RL training that addresses a fundamental problem: when your inference engine and training framework produce slightly different distributions, standard sequence-level importance weights become length-biased, systematically penalizing longer generations. Geometric masking fixes this by using the geometric mean of per-token importance ratios, which is length-invariant.
 
-This post develops the theory that leads to this equivalence, starting from the problem that geometric masking was designed to solve.
+DeepSeek's Off-Policy Sequence Masking (OPSM), introduced in the V3.2 technical report, turns out to be mathematically equivalent to a one-sided geometric sequence mask. The "KL threshold" in OPSM is just the negative log of a geometric mean importance ratio. This equivalence means you can implement OPSM by extending an existing geometric masking setup, and it provides a cleaner way to understand what OPSM is actually doing: it's handling both training-inference mismatch and policy staleness through a single, length-invariant masking criterion.
 
-## The length bias problem in importance sampling
+## background: the ppo ratio
 
-Reinforcement learning for language models faces a fundamental tension: generating rollouts is expensive, so we want to reuse data across multiple gradient steps. But as training progresses, the policy drifts from the distribution that generated the data. Importance sampling corrects for this mismatch.
-
-For autoregressive generation, the sequence-level importance ratio decomposes as a product of per-token ratios:
+PPO's clipped surrogate objective contains a ratio between policies:
 
 $$
-\frac{\pi(y|x)}{\mu(y|x)} = \prod_{t=0}^{T-1} \frac{\pi(y_t | x, y_{<t})}{\mu(y_t | x, y_{<t})}
+J(\theta) = \min\left(\frac{\pi_\theta(a|s)}{\pi_{\theta_{\text{old}}}(a|s)}A, \text{clip} \left( \frac{\pi_\theta(a|s)}{\pi_{\theta_{\text{old}}}(a|s)}, 1-\varepsilon, 1+\varepsilon \right) A \right)
 $$
 
-where $\pi$ is the target policy and $\mu$ is the behavior policy that generated the data. This product structure creates a problem: the ratio grows or shrinks exponentially with sequence length.
+This ratio emerges from importance sampling. The policy gradient requires expectations over trajectories from the current policy $\pi_\theta$, but we want to take multiple gradient steps on a batch collected from a fixed policy $\pi_{\theta_{\text{old}}}$. The importance weight $\frac{\pi_\theta}{\pi_{\theta_{\text{old}}}}$ corrects for this distribution mismatch.
 
-Consider a modest per-token drift where $\rho_t \approx 1.001$ on average. Over 2000 tokens:
+This correction enables multiple gradient steps per batch, which is crucial for efficiency. Generating rollouts is expensive—we want to squeeze as much learning as possible from each generation pass.
 
-$$
-\rho_{\text{seq}} = (1.001)^{2000} \approx 7.39
-$$
+## the three policy formulation
 
-Even minimal per-token divergence causes long sequences to be systematically rejected or heavily down-weighted. The effective trust region shrinks dramatically with length, and the model may learn to generate shorter sequences simply to avoid penalties.
+Standard PPO conflates two distinct roles into a single "old" policy. The batch-size invariant PPO paper (Schulman et al.) decouples these into separate policies:
 
-**Geometric sequence masking** solves this by using the geometric mean of importance ratios instead of their product:
+**Behavior policy** ($\mu$): The policy that actually generated the data. It appears in the importance sampling ratio that corrects for off-policy data:
 
 $$
-\rho_{\text{geo}} = \left( \prod_{t=0}^{T-1} \rho_t \right)^{1/T}
+\frac{\pi_{\theta}(a|s)}{\mu(a|s)}
 $$
 
-In log-space, this becomes the arithmetic mean of log-ratios:
+**Proximal policy** ($\pi_{\text{old}}$): A recent policy used as an anchor for the trust region. It appears in the clipping term that prevents the policy from changing too drastically:
 
 $$
-\log \rho_{\text{geo}} = \frac{1}{T} \sum_{t=0}^{T-1} \log \rho_t
+\text{clip}\left(\frac{\pi_{\theta}(a|s)}{\pi_{\text{old}}(a|s)}, 1-\epsilon, 1+\epsilon\right)
 $$
 
-This quantity represents the *average per-token log-likelihood ratio*. The division by $T$ makes it length-invariant: a 100-token sequence and a 2000-token sequence are judged by the same per-token standard.
+In standard PPO, $\mu = \pi_{\text{old}}$—the same policy serves both roles. The decoupled formulation separates them:
 
-## Sources of off-policyness in LLM training
+$$
+J(\theta)_{\text{decoupled}} = \frac{\pi_{\text{old}}(a | s)}{\mu(a | s)} \min\left(\frac{\pi_\theta(a|s)}{\pi_{\text{old}}(a|s)}A, \text{clip} \left( \frac{\pi_\theta(a|s)}{\pi_{\text{old}}(a|s)}, 1-\varepsilon, 1+\varepsilon \right) A \right)
+$$
 
-Before diving into the mechanics of importance sampling correction, we need to understand *where* off-policyness comes from. Modern RL systems for LLMs use disaggregated architectures: a high-throughput inference engine (vLLM, SGLang) generates rollouts, while a separate training framework performs gradient updates. This separation exists because the two workloads have different optimization targets—generation throughput versus gradient computation throughput.
+The leading term $\frac{\pi_{\text{old}}}{\mu}$ handles off-policy correction. The ratio inside the min/clip handles trust region enforcement. These are separate concerns.
 
-This architecture introduces two distinct sources of distribution mismatch:
+The original GRPO formulation used standard PPO's clipped surrogate objective without this explicit separation—it assumed $\mu = \pi_{\text{old}}$ like vanilla PPO. The three policy formulation became relevant for LLM training through two developments: AReaL introduced it to handle asynchronous RL where multiple policy versions generate training data, and a [blog post from Fengyao](https://fengyao.notion.site/off-policy-rl) highlighted it specifically for training-inference mismatch in disaggregated systems.
 
-**Training-inference mismatch**: The sampling distribution from the inference engine ($\mu$) may differ from the training model ($\pi_{\text{old}}$) even when they share identical weights. Differences in quantization, attention implementations, numerical precision, or softmax approximations can cause the actual sampled distribution to diverge from what the training framework would compute.
+## why this matters for llm training
 
-**Policy staleness**: RL systems generate large rollout batches, then split them into mini-batches for multiple gradient steps. By the time you're training on the final mini-batch, the policy $\pi$ has changed significantly from the $\pi_{\text{old}}$ that existed at rollout time. The data is stale.
+Modern RL training for LLMs uses disaggregated systems: a high-throughput inference engine (vLLM, SGLang) generates rollouts, while a separate training framework performs gradient updates. This separation exists because inference engines are optimized for generation throughput, training frameworks for gradient computation throughput. The problem is that these systems can produce different probability distributions even when running identical model weights.
 
-To discuss these separately, we adopt a three-policy formulation from the batch-size invariant PPO work (Schulman et al.). This decouples the standard "old policy" into two roles:
+This discrepancy was noted in the [MiniMax M1 paper](https://arxiv.org/abs/2506.13585), but it wasn't until [Fengyao's blog post](https://fengyao.notion.site/off-policy-rl) that someone systematically studied the problem and proposed corrections. The [Ant Group paper](https://arxiv.org/abs/2510.18855) expanded on this with additional masking strategies. The core insight from this line of work: in disaggregated RL, we're not just dealing with policy staleness from multiple gradient steps—we're also dealing with a fundamental mismatch between the sampling distribution and the training distribution.
 
-| Symbol | Role | Description |
-|--------|------|-------------|
-| $\mu$ | Behavior policy | The inference engine's actual sampling distribution |
-| $\pi_{\text{old}}$ | Proximal policy | Training model at rollout time, anchor for trust region |
-| $\pi$ | Current policy | Policy being optimized |
+This means two sources of off-policyness:
 
-The ratio $\frac{\pi_{\text{old}}}{\mu}$ captures training-inference mismatch—it's constant for a given rollout. The ratio $\frac{\pi}{\pi_{\text{old}}}$ captures policy staleness—it changes with each gradient step. Standard PPO clipping operates on the latter. The former requires explicit importance sampling correction.
+**Training-inference mismatch**: The sampling distribution from the inference engine ($\mu$) differs from what the training model ($\pi_{\text{old}}$) would have produced due to quantization, different attention implementations, numerical precision, or softmax implementations.
 
-## Importance sampling correction methods
+**Policy staleness**: RL systems generate large rollout batches, then split them into mini-batches for multiple gradient steps. By the time you're training on the last mini-batch, the policy $\pi$ has moved from $\pi_{\text{old}}$.
 
-Given samples from behavior policy $\mu$, we estimate expectations under target policy $\pi$ using importance weights:
+The three policy formulation gives us language to discuss these separately. We track three sets of log-probs:
+
+| Symbol | Variable | Description |
+|--------|----------|-------------|
+| $\pi$ | `per_token_logps` | Current policy being optimized |
+| $\pi_{\text{old}}$ | `old_per_token_logps` | Training model at rollout time (proximal policy) |
+| $\mu$ | `sampling_per_token_logps` | Inference engine at rollout time (behavior policy) |
+
+The ratio $\frac{\pi_{\text{old}}}{\mu}$ captures training-inference mismatch—a correction the original PPO and GRPO objectives don't account for. The ratio $\frac{\pi}{\pi_{\text{old}}}$ captures policy staleness, which is what the standard PPO clipping mechanism constrains. The former requires explicit importance sampling correction beyond what PPO provides.
+
+## importance sampling correction
+
+So how do we actually correct for training-inference mismatch? The standard tool is importance sampling. If we have samples from a behavior policy $\mu$ but want to estimate expectations under a target policy $\pi$, we reweight each sample by the ratio of how likely it is under the target versus the behavior:
 
 $$
 \mathbb{E}_{y \sim \pi}[f(y)] = \mathbb{E}_{y \sim \mu}\left[\frac{\pi(y)}{\mu(y)} f(y)\right]
 $$
 
-For RL, $f(y)$ is typically the policy gradient term. The importance weight corrects for the distribution shift, but unbounded weights introduce high variance. Two approaches handle this:
+For autoregressive generation, computing this ratio requires a product over all tokens. Each token's probability depends on the previous tokens, so the sequence-level ratio factors as:
 
-**Truncated Importance Sampling (TIS)** clips the ratio to a bounded range:
+$$
+\frac{\pi(y|x)}{\mu(y|x)} = \prod_{t=0}^{T-1} \frac{\pi(y_t | x, y_{<t})}{\mu(y_t | x, y_{<t})}
+$$
+
+We can write this more compactly by defining $\rho_t = \frac{\pi(y_t | x, y_{<t})}{\mu(y_t | x, y_{<t})}$ for the per-token ratio, giving us $\rho_{\text{seq}} = \prod_t \rho_t$ for the sequence.
+
+For training-inference mismatch specifically, we want to correct between the training model $\pi_{\text{old}}$ and the inference engine $\mu$:
+
+$$
+\rho_t^{\text{TI}} = \frac{\pi_{\text{old}}(y_t | x, y_{<t})}{\mu(y_t | x, y_{<t})}
+$$
+
+In practice, unbounded importance weights can destabilize training—a single sample with extreme weight dominates the gradient. Two approaches bound these ratios:
+
+**Truncated Importance Sampling (TIS)** clips ratios to a range, keeping the gradient signal but limiting its magnitude:
+
 $$
 \rho \leftarrow \text{clip}(\rho, C_{\min}, C_{\max})
 $$
 
-**Masked Importance Sampling (MIS)** completely discards samples outside the range:
+**Masked Importance Sampling (MIS)** discards samples with extreme ratios entirely, enforcing a hard trust region:
+
 $$
 \rho \leftarrow \begin{cases} \rho & \text{if } C_{\min} \leq \rho \leq C_{\max} \\ 0 & \text{otherwise} \end{cases}
 $$
 
-Both can operate at token-level or sequence-level. Here's how these look in code for sequence-level correction of training-inference mismatch:
+Both can be applied per-token (checking each $\rho_t$) or per-sequence (checking the product $\rho_{\text{seq}}$). In code, a sequence-level MIS check looks like:
 
 ```python
-# Inputs:
-#   old_per_token_logps: log π_old(y_t | x, y_{<t}) - training model at rollout
-#   sampling_per_token_logps: log μ(y_t | x, y_{<t}) - inference engine
-#   mask: attention mask for valid tokens
+# Variable mapping:
+#   old_per_token_logps = π_old (training model)
+#   sampling_per_token_logps = μ (inference engine)
 
-# Per-token log importance ratio: log(π_old / μ)
-log_ratio = (old_per_token_logps - sampling_per_token_logps) * mask
+# Per-token log ratio: log(π_old / μ)
+per_token_log_ratio = (old_per_token_logps - sampling_per_token_logps) * mask
 
-# Sequence-level: sum of log-ratios = log of product
-seq_log_ratio = log_ratio.sum(dim=-1)
+# Sequence-level: sum of logs = log of product
+seq_log_ratio = per_token_log_ratio.sum(dim=-1)
 seq_ratio = torch.exp(seq_log_ratio)
 
-# Truncated IS: clip the ratio
-tis_ratio = torch.clamp(seq_ratio, min=C_min, max=C_max)
-
-# Masked IS: zero out samples outside the trust region
+# MIS: mask sequences outside bounds
 mis_mask = (seq_ratio >= C_min) & (seq_ratio <= C_max)
-mis_ratio = torch.where(mis_mask, seq_ratio, torch.zeros_like(seq_ratio))
 ```
 
-The problem with sequence-level ratios is the length bias discussed earlier. For long sequences, even small per-token drift compounds into extreme sequence ratios, causing systematic rejection.
+The sequence-level approach is simpler but has a problem we'll see next.
 
-## Geometric sequence masking in practice
+## the length bias problem
 
-Geometric masking replaces the sequence-level product with the geometric mean:
+The sequence-level approach has a fundamental issue: the importance ratio $\rho_{\text{seq}} = \prod_t \rho_t$ grows or shrinks exponentially with sequence length.
+
+Consider a modest per-token drift of 0.1%—$\rho_t \approx 1.001$ on average. Over 2000 tokens:
+
+$$
+\rho_{\text{seq}} = (1.001)^{2000} \approx 7.39
+$$
+
+Even with minimal per-token divergence, long sequences get systematically rejected or heavily down-weighted. The effective trust region becomes sequence-length dependent: a bound like $C_{\max} = 2$ might accept most 100-token sequences but reject almost all 2000-token sequences. This creates a bias toward shorter generations regardless of their quality.
+
+## geometric sequence masking
+
+The fix is to use a length-invariant measure of divergence. Instead of the product of per-token ratios, Geometric Sequence Masking uses their geometric mean:
+
+$$
+\rho_{\text{geo}} = \left( \prod_{t=0}^{T-1} \rho_t \right)^{1/T}
+$$
+
+In log-space, the geometric mean becomes an arithmetic mean, which is easier to compute:
+
+$$
+\log \rho_{\text{geo}} = \frac{1}{T} \sum_{t=0}^{T-1} \log \rho_t = \frac{1}{T} \sum_{t=0}^{T-1} \log \frac{\pi(y_t|x, y_{<t})}{\mu(y_t|x, y_{<t})}
+$$
+
+This is the average per-token log-likelihood ratio. Crucially, it doesn't scale with $T$—a 100-token sequence and a 2000-token sequence with the same average per-token divergence will have the same $\rho_{\text{geo}}$.
+
+The geometric sequence mask then applies bounds on this length-invariant ratio:
+
+$$
+g_{\text{geo-mask}} = \mathbf{1}\left[ C_{\min} \leq \rho_{\text{geo}} \leq C_{\max} \right]
+$$
+
+In code, we can extend the MIS calculation from before. The only change is dividing by sequence length before checking bounds:
 
 ```python
-# Inputs same as above
+# Same setup as MIS
+per_token_log_ratio = (old_per_token_logps - sampling_per_token_logps) * mask
+seq_log_ratio = per_token_log_ratio.sum(dim=-1)
 
-# Per-token log importance ratio
-log_ratio = (old_per_token_logps - sampling_per_token_logps) * mask
-
-# Sequence-level sum (same as before)
-seq_log_ratio = log_ratio.sum(dim=-1)
-
-# Key change: normalize by sequence length
+# Geometric mean: divide by sequence length
 seq_lengths = mask.sum(dim=-1).clamp(min=1.0)
-geo_log_ratio = seq_log_ratio / seq_lengths  # Average per-token log-ratio
+geo_mean_log_ratio = seq_log_ratio / seq_lengths  # <-- this is the key change
+geo_ratio = torch.exp(geo_mean_log_ratio)
 
-# Convert to ratio space
-geo_ratio = torch.exp(geo_log_ratio)
-
-# Apply mask based on geometric ratio
+# Same masking logic, now length-invariant
 geo_mask = (geo_ratio >= C_min) & (geo_ratio <= C_max)
 ```
 
-The only change is dividing by sequence length. This transforms the length-biased sequence ratio into a length-invariant geometric mean. Typical thresholds are $C_{\min} = 0.5$, $C_{\max} = 2.0$, corresponding to $|\log \rho_{\text{geo}}| \leq \log 2 \approx 0.69$.
+So far we've covered importance sampling correction for training-inference mismatch—specifically, how to compute the ratio $\frac{\pi_{\text{old}}}{\mu}$ and how geometric masking makes this length-invariant. But this only addresses one source of off-policyness. Policy staleness—the drift between $\pi$ and $\pi_{\text{old}}$ during multiple gradient steps—is a separate problem.
 
-## DeepSeek OPSM
+DeepSeek's OPSM tackles both at once, using a different approach than the TIS/MIS methods above.
 
-[DeepSeek-V3.2](https://arxiv.org/abs/2512.02556) introduces Off-Policy Sequence Masking to stabilize RL training. The method addresses a specific failure mode: highly off-policy negative samples can destabilize optimization. From the paper:
+## deepseek opsm
 
-> Models benefit the most by learning from its own mistakes, whereas highly off-policy negative samples can be detrimental, potentially misleading or destabilizing the optimization process.
+[DeepSeek-V3.2](https://arxiv.org/abs/2512.02556) introduces Off-Policy Sequence Masking. Like the MIS we saw earlier, it's a sequence-level mask that discards samples based on a divergence threshold. But OPSM has two key differences: it measures divergence between the current policy $\pi$ and the sampling distribution (not between $\pi_{\text{old}}$ and $\mu$), and it only applies to negative-advantage samples.
 
-The masking rule is:
+The masking rule:
 
 $$
 M_{i,t} = \begin{cases}
@@ -150,119 +193,92 @@ M_{i,t} = \begin{cases}
 \end{cases}
 $$
 
-A sequence is masked (zeroed) if *both* conditions hold: (1) it has negative advantage, and (2) its average KL divergence exceeds threshold $\delta$.
+A sequence is kept if either: (1) it has non-negative advantage, or (2) its average log-probability ratio is within threshold $\delta$. The rationale from the paper:
 
-The one-sided nature is intentional. Negative-advantage samples that have drifted far from the current policy are unreliable learning signals—they represent mistakes the model wouldn't make anymore. Positive-advantage samples, even if off-policy, still provide useful reward signal.
+> Models benefit the most by learning from its own mistakes, whereas highly off-policy negative samples can be detrimental, potentially misleading or destabilizing the optimization process.
 
-A crucial implementation detail from DeepSeek:
+The one-sided nature makes sense: for positive-advantage samples, we want to reinforce the behavior regardless of how much the policy has drifted. For negative-advantage samples, learning from highly off-policy data can be counterproductive—the policy has already moved away from these samples, suggesting they're no longer representative of what the current policy would produce.
+
+A crucial detail from DeepSeek about the notation:
 
 > Note that $\pi_{\text{old}}$ here denotes the sampling probability directly returned by the inference framework, thus the KL divergence between the old and current policy accounts for both sources of off-policyness mentioned above.
 
-DeepSeek uses the inference engine's log-probs directly. In our three-policy notation, their $\pi_{\text{old}}$ is our $\mu$. The ratio $\frac{\mu}{\pi}$ therefore captures *both* training-inference mismatch and policy staleness in a single term.
+In our three-policy notation, DeepSeek's $\pi_{\text{old}}$ is our $\mu$—the inference engine's distribution. So OPSM computes the divergence between the current policy $\pi$ and the inference distribution $\mu$, which captures both training-inference mismatch and policy staleness in a single ratio. This is different from the TIS/MIS approaches that only correct for training-inference mismatch between $\pi_{\text{old}}$ and $\mu$.
 
-## OPSM is geometric sequence masking
+## opsm is geometric sequence masking
 
-The OPSM formulation may look like a KL divergence threshold, but it's algebraically equivalent to a geometric sequence mask. Recognizing this equivalence lets us: (1) implement OPSM using existing geometric masking code, and (2) understand OPSM within a principled framework for length-invariant importance sampling.
+Look at OPSM's threshold term again: $\frac{1}{T}\sum_t \log \frac{\mu}{\pi}$. This is the average per-token log-probability ratio—exactly the log of a geometric mean, just with the policies in a different order than we used for training-inference correction. If we define the geometric mean ratio as $\rho_{\text{geo}} = \exp\left(\frac{1}{T}\sum_t \log \frac{\pi}{\mu}\right)$, then OPSM's threshold term is simply $-\log \rho_{\text{geo}}$.
 
-The OPSM condition uses an average log-ratio:
-
-$$
-\frac{1}{T} \sum_{t=0}^{T-1} \log \frac{\mu(y_t | x, y_{<t})}{\pi(y_t | x, y_{<t})} > \delta
-$$
-
-Let's connect this to the geometric importance ratio $\rho_{\text{geo}} = \left(\prod_t \frac{\pi}{\mu}\right)^{1/T}$. Taking the log:
-
-$$
-\log \rho_{\text{geo}} = \frac{1}{T} \sum_{t=0}^{T-1} \log \frac{\pi(y_t | x, y_{<t})}{\mu(y_t | x, y_{<t})}
-$$
-
-Notice the OPSM KL term is exactly the *negative* of this:
-
-$$
-\underbrace{\frac{1}{T} \sum_t \log \frac{\mu}{\pi}}_{\text{OPSM KL term}} = -\underbrace{\frac{1}{T} \sum_t \log \frac{\pi}{\mu}}_{\log \rho_{\text{geo}}}
-$$
-
-The OPSM condition $\frac{1}{T} \sum_t \log \frac{\mu}{\pi} > \delta$ therefore becomes:
+This means OPSM's condition "$\frac{1}{T}\sum_t \log \frac{\mu}{\pi} > \delta$" is equivalent to:
 
 $$
 -\log \rho_{\text{geo}} > \delta \quad \Leftrightarrow \quad \rho_{\text{geo}} < e^{-\delta}
 $$
 
-**OPSM is a one-sided geometric sequence mask** that drops sequences where the current policy assigns significantly *lower* probability than the sampling distribution. The threshold $\delta$ maps directly to a geometric ratio threshold $e^{-\delta}$.
+OPSM is a one-sided geometric sequence mask. It drops sequences where the current policy assigns significantly lower probability than the sampling distribution—where $\rho_{\text{geo}}$ falls below the threshold $e^{-\delta}$.
 
-| Aspect | Two-sided Geometric Mask | DeepSeek OPSM |
-|--------|-------------------------|---------------|
-| Bounds | $C_{\min} \leq \rho_{\text{geo}} \leq C_{\max}$ | $\rho_{\text{geo}} \geq e^{-\delta}$ (lower bound only) |
+| Aspect | Geometric Sequence Mask | DeepSeek OPSM |
+|--------|------------------------|---------------|
+| Direction | Two-sided ($C_{\min} \leq \rho_{\text{geo}} \leq C_{\max}$) | One-sided ($\rho_{\text{geo}} \geq e^{-\delta}$) |
 | Advantage condition | None | Only applies when $\hat{A} < 0$ |
-| Ratio direction | $\frac{\pi_{\text{old}}}{\mu}$ or $\frac{\pi}{\mu}$ | $\frac{\pi}{\mu}$ |
+| Ratio | $\frac{\pi_{\text{old}}}{\mu}$ (training-inference only) | $\frac{\pi}{\mu}$ (both sources) |
 
-## Decomposing the OPSM ratio
-
-Since OPSM uses $\frac{\pi}{\mu}$ rather than $\frac{\pi_{\text{old}}}{\mu}$, it captures both sources of off-policyness. We can factor this to see both contributions:
+The key difference is which ratio OPSM uses. We can factor $\frac{\pi}{\mu}$ to see what it captures:
 
 $$
-\frac{\pi(y_t | x, y_{<t})}{\mu(y_t | x, y_{<t})} = \underbrace{\frac{\pi_{\text{old}}(y_t | x, y_{<t})}{\mu(y_t | x, y_{<t})}}_{\text{training-inference}} \times \underbrace{\frac{\pi(y_t | x, y_{<t})}{\pi_{\text{old}}(y_t | x, y_{<t})}}_{\text{staleness}}
+\frac{\pi}{\mu} = \frac{\pi_{\text{old}}}{\mu} \times \frac{\pi}{\pi_{\text{old}}}
 $$
 
-Taking logs and averaging over the sequence:
+The first term is the training-inference mismatch we've been discussing. The second is policy staleness—how much $\pi$ has drifted from $\pi_{\text{old}}$ during gradient updates. OPSM's single ratio captures both.
+
+Taking logs and averaging over the sequence, we get:
 
 $$
-\log \rho_{\text{geo}}^{\text{total}} = \underbrace{\frac{1}{T} \sum_t \log \frac{\pi_{\text{old}}}{\mu}}_{\text{training-inference (constant per rollout)}} + \underbrace{\frac{1}{T} \sum_t \log \frac{\pi}{\pi_{\text{old}}}}_{\text{staleness (changes each step)}}
+\underbrace{\frac{1}{T} \sum_{t} \log \frac{\pi}{\mu}}_{\log \rho_{\text{geo}}} = \underbrace{\frac{1}{T} \sum_{t} \log \frac{\pi_{\text{old}}}{\mu}}_{\text{training-inference geo-mean}} + \underbrace{\frac{1}{T} \sum_{t} \log \frac{\pi}{\pi_{\text{old}}}}_{\text{staleness geo-mean}}
 $$
 
-The first term is computed once when the rollout is generated. The second term must be recomputed at each gradient step as $\pi$ updates. This decomposition is useful for debugging and ablations:
+Notice that the first term on the right is exactly the `geo_mean_log_ratio` we computed for training-inference correction earlier. This is a useful decomposition for implementation: the training-inference term only needs to be computed once per rollout (it doesn't depend on $\pi$), while the staleness term changes with each gradient step as $\pi$ updates.
+
+If you already have geometric masking for training-inference mismatch, you can extend it to full OPSM by adding the staleness term:
 
 ```python
-# Inputs:
-#   per_token_logps: log π(y_t | x, y_{<t}) - current policy
-#   old_per_token_logps: log π_old(y_t | x, y_{<t}) - training model at rollout
-#   sampling_per_token_logps: log μ(y_t | x, y_{<t}) - inference engine
-#   advantages: advantage estimates per sequence
-#   delta: OPSM threshold
+# geo_mean_log_ratio from earlier: log geometric mean of (π_old / μ)
+# This is computed once per rollout
+ti_geo_mean = geo_mean_log_ratio  # from training-inference geo-mask
 
-seq_lengths = mask.sum(dim=-1).clamp(min=1.0)
+# Staleness term: log geometric mean of (π / π_old)
+# Computed each gradient step as π updates
+staleness_log_ratio = (per_token_logps - old_per_token_logps) * mask
+staleness_geo_mean = staleness_log_ratio.sum(dim=-1) / seq_lengths
 
-# --- Computed once per rollout ---
-# Training-inference geometric ratio: (π_old / μ)^(1/T)
-ti_log_ratio = ((old_per_token_logps - sampling_per_token_logps) * mask).sum(dim=-1)
-ti_geo_log = ti_log_ratio / seq_lengths
+# OPSM's full ratio: log geometric mean of (π / μ)
+opsm_geo_mean = ti_geo_mean + staleness_geo_mean
 
-# --- Computed at each gradient step ---
-# Staleness geometric ratio: (π / π_old)^(1/T)
-staleness_log_ratio = ((per_token_logps - old_per_token_logps) * mask).sum(dim=-1)
-staleness_geo_log = staleness_log_ratio / seq_lengths
-
-# Total geometric log-ratio: log(π/μ)^(1/T) = log(π_old/μ)^(1/T) + log(π/π_old)^(1/T)
-total_geo_log = ti_geo_log + staleness_geo_log
-
-# OPSM condition: mask if negative advantage AND geo_ratio below threshold
-# KL term in OPSM = -total_geo_log, condition is KL > delta
-# Equivalent: total_geo_log < -delta, i.e., geo_ratio < exp(-delta)
-is_neg_advantage = advantages < 0
-is_off_policy = total_geo_log < -delta  # equivalent to geo_ratio < exp(-delta)
-opsm_mask = ~(is_neg_advantage & is_off_policy)
-
-# Apply mask to loss
-masked_loss = loss * opsm_mask.float()
+# OPSM mask: keep if positive advantage OR low divergence
+# Note: OPSM uses -log(ρ_geo) > δ, which is equivalent to log(ρ_geo) < -δ
+is_neg_adv = advantages < 0
+is_high_divergence = opsm_geo_mean < -delta
+opsm_mask = ~(is_neg_adv & is_high_divergence)
 ```
 
-The practical benefit of this decomposition: `ti_geo_log` can be cached once per rollout since it doesn't depend on the current policy. Only `staleness_geo_log` needs recomputation at each gradient step.
+The payoff: if you've already implemented geometric masking for training-inference correction, OPSM is just adding one more term and a conditional on advantage sign.
 
-## Summary
+## summary
 
-The key insight is that OPSM's "average KL threshold" is algebraically equivalent to a geometric importance ratio threshold:
+The mathematical relationships:
 
-1. **Sequence-level IS** uses $\prod_t \rho_t$—exponentially length-biased
+1. **Sequence IS** uses $\prod_t \rho_t$—length-biased
 2. **Geometric masking** uses $(\prod_t \rho_t)^{1/T}$—length-invariant
-3. **OPSM's KL term** equals $-\log \rho_{\text{geo}}$
+3. **OPSM KL term** equals $-\log \rho_{\text{geo}}$
 4. **OPSM** = one-sided geometric mask on $\frac{\pi}{\mu}$, conditioned on negative advantages
-5. **The ratio factors** as $\frac{\pi}{\mu} = \frac{\pi_{\text{old}}}{\mu} \times \frac{\pi}{\pi_{\text{old}}}$, separating training-inference mismatch from staleness
+5. **Factored**: $\frac{\pi}{\mu} = \frac{\pi_{\text{old}}}{\mu} \times \frac{\pi}{\pi_{\text{old}}}$
 
-This connection places OPSM within the broader framework of length-invariant importance sampling correction. If you're already computing geometric sequence masks for training-inference mismatch, extending to OPSM requires only: (1) using $\pi$ instead of $\pi_{\text{old}}$ in the numerator, and (2) conditioning the mask on negative advantages.
+The insight that OPSM is a geometric sequence mask connects it to a principled framework for length-invariant importance sampling and clarifies what the method optimizes.
 
-## References
+## references
 
-The geometric sequence masking framework and much of the importance sampling theory here draws from Yingru Li's work:
+Everything I've come to know about Geometric Sequence Masking, and most of the stuff I've come to understand about importance sampling, is from Yingru LI, and his posts:
 
-1. [RL Collapse Part 3](https://richardli.xyz/post/rl-collapse-part3/)
-2. [Demystifying RL Collapse from Training-Inference Mismatch](https://yingru.notion.site/When-Speed-Kills-Stability-Demystifying-RL-Collapse-from-the-Training-Inference-Mismatch-271211a558b7808d8b12d403fd15edda)
+1) https://richardli.xyz/post/rl-collapse-part3/
+2) https://yingru.notion.site/When-Speed-Kills-Stability-Demystifying-RL-Collapse-from-the-Training-Inference-Mismatch-271211a558b7808d8b12d403fd15edda
+
