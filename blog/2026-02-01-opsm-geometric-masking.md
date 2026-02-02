@@ -284,6 +284,10 @@ is_high_divergence = opsm_geo_mean < -delta
 opsm_mask = ~(is_neg_adv & is_high_divergence)
 ```
 
+## caveat
+
+The framing in this post treats the training-inference mismatch as a static numerical issue to be corrected. [Recent work from Yaxiang Zhang and Yingru Li](https://yingru.notion.site/Beyond-Precision-Why-Training-Inference-Mismatch-is-an-Optimization-Problem-and-How-Simple-LR-Sched-2d9211a558b780f1a710f99dbdc403d3) challenges this view, arguing that mismatch is better understood as a dynamic optimization problem coupled with gradient noise, and that targeted learning rate scheduling may be more effective than importance sampling corrections. Still too early to tell how this approach will adopt to a larger-scale, but it's an interesting alternative framing.
+
 ## references
 
 Everything I've come to understand about Geometric Sequence Masking, and most of my understanding of importance sampling in this context, comes from Yingru Li's posts:
