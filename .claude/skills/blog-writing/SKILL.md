@@ -67,6 +67,111 @@ Study these passages for tone calibration:
 
 ---
 
+## Common AI-Generated Writing Failures
+
+When transforming drafts, actively avoid these patterns that make posts read like documentation rather than authored understanding:
+
+### Encyclopedia Voice
+
+**Problem**: Opening with definitions or declaring what a technique "is."
+
+**Bad**: "Geometric Sequence Masking is a technique for importance sampling correction..."
+
+**Good**: "Distribution shift between training and inference frameworks was a recurring theme in late 2025. For whatever reason, I've found myself drawn to this problem..."
+
+The reader should feel they're learning alongside someone who has worked through the material, not receiving a Wikipedia entry.
+
+### Missing Personal Stakes
+
+**Problem**: No sense of *why this author cares* or *why now*.
+
+Establish:
+- What prompted the investigation (a paper, a bug, a conversation)
+- Personal engagement with the topic ("I scan every new paper for...")
+- Temporal context when relevant ("over the later half of 2025...")
+
+### Declarative Claims vs. Offered Perspectives
+
+**Problem**: Titles and framing that declare facts rather than offer viewpoints.
+
+**Bad title**: "X is Y" (declarative claim)
+**Good title**: "a lens for X" or "understanding X through Y" (offered perspective)
+
+Humility about your framing invites engagement; declarations shut down dialogue.
+
+### Options Without Reasoning
+
+**Problem**: Listing alternatives without explaining when/why to choose each.
+
+**Bad**: "Two approaches exist: TIS clips ratios; MIS discards them."
+
+**Good**: "As usual with RL, the choice *depends*. Clipping treats every sample as fundamentally usable and interprets extreme ratios as a variance problem. But extreme ratios typically arise when... Masking takes the opposite stance..."
+
+Show the *reasoning* about choices, not just the options.
+
+### Math Without Meaning
+
+**Problem**: Showing equations without interpreting what they mean.
+
+After every significant equation, add an interpretation paragraph. Ask: "What is this equation really asking?" and answer in plain English.
+
+**Bad**: [equation] followed immediately by code or next section
+
+**Good**: [equation] → "This decomposition clarifies what OPSM is really asking: 'is this negative sample still representative of what the current policy might produce?'"
+
+### Missing Practical Implications
+
+**Problem**: Presenting techniques as abstract facts without connecting to real use cases.
+
+Add speculation and connection to trends:
+
+"My guess is that hard trust region enforcement becomes especially important as trajectories grow longer with agentic work and complex reasoning problems..."
+
+### Disconnected Sections
+
+**Problem**: Sections that read like independent encyclopedia entries.
+
+Use explicit causal transitions:
+
+- "So far we've covered X... But this only addresses one aspect."
+- "This leads naturally to the question of..."
+- "With this foundation, we can now understand why..."
+
+### No Uncertainty Markers
+
+**Problem**: Presenting one framing as definitive truth.
+
+Include:
+- "My guess is..." for speculation
+- A caveat section acknowledging alternative approaches
+- "Still too early to tell..." when appropriate
+
+Intellectual honesty about limitations builds trust.
+
+### Reference-Style Scaffolding
+
+**Problem**: Numbered sections, tables of contents, formal "Summary" sections—signals documentation.
+
+Use simple lowercase headers. Let prose do the summarizing. End with insight, not enumeration.
+
+### References as Footnotes
+
+**Problem**: Parenthetical citations disconnected from narrative.
+
+**Bad**: "AReaL (https://...) proposed this"
+
+**Good**: "I first encountered this in AReaL... but it really came into focus after Fengyao's blog post"
+
+References become part of the discovery story—they're witnesses to how understanding evolved.
+
+### Unplanned Notation
+
+**Problem**: Using generic notation that becomes confusing when similar concepts appear later.
+
+Plan notation for the *entire* post before writing. If you'll have two geometric means, distinguish them from the start ($\rho_{\text{geo}}^{\text{TI}}$ vs $\rho_{\text{geo}}^{\text{OPSM}}$).
+
+---
+
 ## Transformation Workflow
 
 ### Step 1: Understand the Draft
@@ -82,13 +187,18 @@ Before writing anything:
 
 ### Step 2: Design the Narrative Arc
 
-A blog post is a **story**, not a dump of information. Structure around:
+A blog post is a **story**, not a dump of information. The reader should feel they're learning alongside someone who has worked through the material—not receiving a reference document.
 
-1. **Hook**: Why should the reader care? What problem or curiosity drives this?
-2. **Setup**: Minimal background needed to understand the contribution
-3. **Core content**: The main insight, derivation, or technique
-4. **Synthesis**: What does this mean? How does it connect?
-5. **Takeaway**: Crisp summary of the key insight
+**Discovery narrative structure:**
+
+1. **Personal hook**: Why does *this author* care? What prompted the investigation? ("For whatever reason, I've found myself drawn to this problem...")
+2. **Problem setup**: What's broken or missing? Frame it as a real challenge.
+3. **Existing approaches**: What tools already exist? Why are they insufficient?
+4. **Core insight**: The aha moment. What resolves the tension?
+5. **Deeper understanding**: Connect insights, show implications, add speculation.
+6. **Honest limitations**: What's still uncertain? What are alternative framings?
+
+**Key principle**: Structure reveals how understanding was *built*, not just what was learned. The progression should feel causal: "This led me to try X, but X has problem Y, which motivates Z."
 
 ### Step 3: Blend Modalities
 
@@ -217,10 +327,11 @@ Narrative:
 - [ ] Each section serves the narrative
 - [ ] Logical flow from setup to conclusion
 - [ ] Appropriate scope (cut tangents)
+- [ ] Explicit transitions between sections (causal, not just sequential)
 
 Technical:
 - [ ] All math is correct
-- [ ] Notation is consistent throughout
+- [ ] Notation is consistent throughout AND planned for full post
 - [ ] Code examples are correct and minimal
 - [ ] References cited appropriately
 
@@ -230,9 +341,19 @@ Style:
 - [ ] Prose/math/code blend is smooth
 - [ ] Consistent terminology
 
+Authorial Presence (anti-AI-slop):
+- [ ] Opens with personal context, not encyclopedia definition
+- [ ] Establishes why this author cares / why now
+- [ ] Every significant equation followed by interpretation
+- [ ] Alternatives presented with reasoning, not just listed
+- [ ] Includes uncertainty markers where appropriate ("My guess is...")
+- [ ] References integrated into narrative, not just cited
+- [ ] No formal summary section at end (let prose conclude)
+- [ ] Title frames perspective, not declarative claim
+
 Format:
 - [ ] Frontmatter is complete
-- [ ] Headers create clear structure
+- [ ] Headers create clear structure (simple, not numbered)
 - [ ] Images referenced correctly (`![](/assets/...)`)
 - [ ] Internal links use wiki-link format if needed
 ```
@@ -274,3 +395,52 @@ possible from each generation pass.
 - Connected to the LLM context (addressing the [needs more] note)
 - More conversational framing
 - Same technical content, better narrative flow
+
+---
+
+## Example: Encyclopedia Voice → Discovery Narrative
+
+**Encyclopedia voice (bad):**
+```markdown
+# Geometric Sequence Masking
+
+Geometric Sequence Masking is a technique for importance sampling correction
+in RL training that addresses a fundamental problem: when your inference
+engine and training framework produce slightly different distributions,
+standard sequence-level importance weights become length-biased.
+
+## 1. Background: The PPO Ratio
+
+PPO's clipped surrogate objective contains a ratio between policies...
+```
+
+**Discovery narrative (good):**
+```markdown
+# a lens for understanding X
+
+Distribution shift between training and inference frameworks was a recurring
+theme in late 2025. For whatever reason, I've found myself drawn to this
+problem. Every time a new paper drops, I scan for any mention of
+training-inference mismatch.
+
+There are two paths forward. You can eliminate the discrepancy at the source...
+Or you can accept that some mismatch is inevitable and correct for it
+algorithmically. The latter has been far more common, and is the focus of
+this post.
+
+I'll walk through the standard tools for handling off-policy data, show why
+naive approaches break down for long sequences, and arrive at geometric
+sequence masking as a length-invariant alternative. This all leads somewhere
+specific...
+
+## background
+
+PPO's clipped surrogate objective contains a ratio between policies...
+```
+
+**Key differences:**
+- Opens with temporal/personal context, not definition
+- Establishes author's relationship to the topic
+- Previews the journey (problem → tools → failure → solution → insight)
+- Uses lowercase headers, no numbering
+- Title offers perspective ("a lens for") rather than declaring fact

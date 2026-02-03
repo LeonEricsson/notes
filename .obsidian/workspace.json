@@ -4,21 +4,19 @@
     "type": "split",
     "children": [
       {
-        "id": "650e58dc1cffa2cc",
+        "id": "b54e2bb9f642fdeb",
         "type": "tabs",
         "children": [
           {
-            "id": "267149e548ad7419",
+            "id": "7c383352af33f337",
             "type": "leaf",
             "state": {
-              "type": "markdown",
+              "type": "image",
               "state": {
-                "file": "general/2025 MoE Model Overview.md",
-                "mode": "source",
-                "source": false
+                "file": "assets/Screenshot 2026-02-03 at 13.56.59.png"
               },
-              "icon": "lucide-file",
-              "title": "2025 MoE Model Overview"
+              "icon": "lucide-image",
+              "title": "Screenshot 2026-02-03 at 13.56.59"
             }
           }
         ]
@@ -78,8 +76,7 @@
       }
     ],
     "direction": "horizontal",
-    "width": 352.50418853759766,
-    "collapsed": true
+    "width": 249.50418853759766
   },
   "right": {
     "id": "cdf8150d5b027fa9",
@@ -170,9 +167,29 @@
       "command-palette:Open command palette": false
     }
   },
-  "active": "267149e548ad7419",
+  "active": "98872eb1094d1af5",
   "lastOpenFiles": [
+    "reading-notes/pretraining laws tldr.md",
+    "reading-notes/Physics of Language Models - Part 4.md",
+    "assets/Screenshot 2026-02-03 at 22.36.58.png",
+    "assets/Screenshot 2026-02-03 at 22.36.22.png",
+    "assets/Screenshot 2026-02-03 at 22.32.49.png",
+    "assets/Screenshot 2026-02-03 at 22.32.42.png",
+    "assets/Screenshot 2026-02-03 at 22.27.26.png",
+    "assets/Screenshot 2026-02-03 at 16.20.27.png",
+    "assets/Screenshot 2026-02-03 at 16.19.21.png",
+    "assets/Screenshot 2026-02-03 at 16.14.44.png",
+    "assets/Screenshot 2026-02-03 at 16.00.46.png",
+    "assets/Screenshot 2026-02-03 at 15.58.34.png",
+    "reading-notes/Physics of Language Models.md",
     "CLAUDE.md",
+    "Untitled.md",
+    "reading-notes/On the Interplay of Pre-Training, Mid-Training, and RLon Reasoning Language Models.md",
+    "reading-notes/2024-09-19-physicsoflm.md",
+    "reading-notes/Olmo 3.md",
+    "reading-notes/On-policy Distillation.md",
+    "blog/2026-02-01-opsm-geometric-masking.md",
+    "general/2025 MoE Model Overview.md",
     "general/Benchmarks.md",
     "general/Research Directions.md",
     "general/Modern Transformer.md",
@@ -181,33 +198,12 @@
     "reading-notes/Vision language models. Visual reasoning.md",
     "reading-notes/When Speed Kills Stability.md",
     "reading-notes/RL without External Rewards.md",
-    "reading-notes/Olmo 3.md",
     "reading-notes/Multimodal Document QA.md",
     "reading-notes/Motif 2.md",
     "reading-notes/MoE Inference Economics.md",
     "reading-notes/MiMo V2 Flash.md",
     "reading-notes/M2.1 Post Training.md",
     "reading-notes/Long Context Benchmarking.md",
-    "reading-notes/Magistral.md",
-    "reading-notes/LLM RL with no data. lol.md",
-    "blog/2022-10-10-alphatensor.md",
-    "reading-notes/2025-10-27-visualretrievers.md",
-    "reading-notes/2025-10-21-deepseekocr.md",
-    "reading-notes/2025-10-21-artofscalingrl.md",
-    "reading-notes/2025-10-19-onpolicydistillation.md",
-    "reading-notes/2025-10-16-moreling.md",
-    "reading-notes/2025-10-15-lorawithoutregrets.md",
-    "reading-notes/2025-09-23-longcatflash.md",
-    "assets/zephyr-ktodpoipo.png",
-    "assets/warpgroup.png",
-    "assets/vqvae.png",
-    "assets/visionencoders.png",
-    "assets/vima2.png",
-    "assets/vima.jpeg",
-    "assets/unet.png",
-    "assets/transformerstream.png",
-    "assets/tensormul.png",
-    "assets/systemoverviewopenfive.png",
     "images",
     "blog",
     "blog",
