@@ -4,19 +4,19 @@
     "type": "split",
     "children": [
       {
-        "id": "b54e2bb9f642fdeb",
+        "id": "50625122dc00db76",
         "type": "tabs",
         "children": [
           {
-            "id": "7c383352af33f337",
+            "id": "ec29bf35f670e5c0",
             "type": "leaf",
             "state": {
               "type": "image",
               "state": {
-                "file": "assets/Screenshot 2026-02-03 at 13.56.59.png"
+                "file": "assets/Pasted image 20260204125130.png"
               },
               "icon": "lucide-image",
-              "title": "Screenshot 2026-02-03 at 13.56.59"
+              "title": "Pasted image 20260204125130"
             }
           }
         ]
@@ -169,21 +169,23 @@
   },
   "active": "98872eb1094d1af5",
   "lastOpenFiles": [
+    "Learning Rate Decay Schedulers (Cosine decay, WSD, and WSM).md",
+    "assets/Pasted image 20260204150245.png",
+    "assets/Pasted image 20260204125143.png",
+    "assets/Pasted image 20260204125130.png",
+    "assets/Pasted image 20260204112656.png",
+    "assets/Pasted image 20260204113152.png",
+    "reading-notes/LongCat-Flash-Thinking-2601.md",
+    "reading-notes/OCR Models.md",
+    "CLAUDE.md",
+    "assets/Screenshot 2026-02-03 at 13.56.59.png",
     "reading-notes/pretraining laws tldr.md",
     "reading-notes/Physics of Language Models - Part 4.md",
     "assets/Screenshot 2026-02-03 at 22.36.58.png",
     "assets/Screenshot 2026-02-03 at 22.36.22.png",
     "assets/Screenshot 2026-02-03 at 22.32.49.png",
     "assets/Screenshot 2026-02-03 at 22.32.42.png",
-    "assets/Screenshot 2026-02-03 at 22.27.26.png",
-    "assets/Screenshot 2026-02-03 at 16.20.27.png",
-    "assets/Screenshot 2026-02-03 at 16.19.21.png",
-    "assets/Screenshot 2026-02-03 at 16.14.44.png",
-    "assets/Screenshot 2026-02-03 at 16.00.46.png",
-    "assets/Screenshot 2026-02-03 at 15.58.34.png",
     "reading-notes/Physics of Language Models.md",
-    "CLAUDE.md",
-    "Untitled.md",
     "reading-notes/On the Interplay of Pre-Training, Mid-Training, and RLon Reasoning Language Models.md",
     "reading-notes/2024-09-19-physicsoflm.md",
     "reading-notes/Olmo 3.md",
@@ -202,8 +204,6 @@
     "reading-notes/Motif 2.md",
     "reading-notes/MoE Inference Economics.md",
     "reading-notes/MiMo V2 Flash.md",
-    "reading-notes/M2.1 Post Training.md",
-    "reading-notes/Long Context Benchmarking.md",
     "images",
     "blog",
     "blog",
