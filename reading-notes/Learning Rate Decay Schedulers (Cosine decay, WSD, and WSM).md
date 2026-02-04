@@ -54,4 +54,4 @@ This gives us the final equivalent form:
 
 $$\hat{\theta}_{n+k} = \theta_n - \sum_{i=1}^k w_i \cdot g_{n+i-1}$$
 
-This equation reveals that merging checkpoints is equivalent to applying a **synthetic decay schedule** defined by $w_i$ to the gradients. Even though the live training used a constant learning rate, the merged model effectively "sees" the gradients scaled down by $w_i$. 
+This equation reveals that merging checkpoints is equivalent to applying a **synthetic decay schedule** defined by $w_i$ to the gradients. Even though the live training used a constant learning rate, the merged model effectively "sees" the gradients scaled down by $w_i$. all 
