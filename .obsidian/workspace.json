@@ -4,19 +4,21 @@
     "type": "split",
     "children": [
       {
-        "id": "50625122dc00db76",
+        "id": "0cfdb4d6f02b46e9",
         "type": "tabs",
         "children": [
           {
-            "id": "ec29bf35f670e5c0",
+            "id": "1d4a340c19b199af",
             "type": "leaf",
             "state": {
-              "type": "image",
+              "type": "markdown",
               "state": {
-                "file": "assets/Pasted image 20260204125130.png"
+                "file": "reading-notes/Learning Rate Decay Schedulers (Cosine decay, WSD, and WSM).md",
+                "mode": "source",
+                "source": false
               },
-              "icon": "lucide-image",
-              "title": "Pasted image 20260204125130"
+              "icon": "lucide-file",
+              "title": "Learning Rate Decay Schedulers (Cosine decay, WSD, and WSM)"
             }
           }
         ]
@@ -169,10 +171,10 @@
   },
   "active": "98872eb1094d1af5",
   "lastOpenFiles": [
-    "Learning Rate Decay Schedulers (Cosine decay, WSD, and WSM).md",
+    "assets/Pasted image 20260204125130.png",
+    "reading-notes/Learning Rate Decay Schedulers (Cosine decay, WSD, and WSM).md",
     "assets/Pasted image 20260204150245.png",
     "assets/Pasted image 20260204125143.png",
-    "assets/Pasted image 20260204125130.png",
     "assets/Pasted image 20260204112656.png",
     "assets/Pasted image 20260204113152.png",
     "reading-notes/LongCat-Flash-Thinking-2601.md",
